@@ -248,40 +248,66 @@
   </main>
 
   <script>
-    function calcular() {
-      const costo = Number(document.getElementById("costo").value);
-      const extras = Number(document.getElementById("extras").value || 0);
-      const margen = Number(document.getElementById("margen").value);
-      const resultado = document.getElementById("resultado");
+  function calcular() {
+    const campoCosto = document.getElementById("costo");
+    const campoExtras = document.getElementById("extras");
+    const campoMargen = document.getElementById("margen");
+    const campoComisionVenta = document.getElementById("comisionVenta");
+    const campoComisionPago = document.getElementById("comisionPago");
+    const campoCargoFijo = document.getElementById("cargoFijo");
+    const resultado = document.getElementById("resultado");
 
-      if (
-        document.getElementById("costo").value === "" ||
-        costo <= 0 || extras < 0 ||
-        margen < 0 || margen >= 100
-      ) {
-        alert("Ingresá un costo válido y un margen entre 0 y 99%.");
-        return;
-      }
+    const costo = Number(campoCosto.value);
+    const extras = Number(campoExtras.value || 0);
+    const margen = Number(campoMargen.value);
+    const comisionVenta = Number(campoComisionVenta.value || 0);
+    const comisionPago = Number(campoComisionPago.value || 0);
+    const cargoFijo = Number(campoCargoFijo.value || 0);
 
-      const total = costo + extras;
-      const precio = total / (1 - margen / 100);
-      const ganancia = precio - total;
-      const formato = n => n.toLocaleString("es-AR", {
-        style: "currency",
-        currency: "ARS",
-        maximumFractionDigits: 2
-      });
-
-      document.getElementById("precio").textContent =
-        formato(precio);
-
-      document.getElementById("detalle").textContent =
-        "Costos ingresados: " + formato(total) +
-        ". Ganancia estimada: " + formato(ganancia) +
-        ". Revisá también impuestos y comisiones.";
-
-      resultado.style.display = "block";
+    if (
+      campoCosto.value === "" ||
+      campoMargen.value === "" ||
+      costo <= 0 ||
+      extras < 0 ||
+      margen < 0 || margen >= 100 ||
+      comisionVenta < 0 ||
+      comisionPago < 0 ||
+      comisionVenta + comisionPago + margen >= 100 ||
+      cargoFijo < 0 ||
+      ![costo, extras, margen, comisionVenta, comisionPago, cargoFijo].every(Number.isFinite)
+    ) {
+      alert("Revisá los valores. El costo debe ser mayor que cero y la suma del margen y las comisiones porcentuales debe ser menor al 100%.");
+      return;
     }
+
+    const total = costo + extras;
+
+    // El margen se calcula sobre el precio final de venta.
+    const porcentajeDisponible =
+      1 - (margen + comisionVenta + comisionPago) / 100;
+
+    const precio = (total + cargoFijo) / porcentajeDisponible;
+    const comisiones = precio * (comisionVenta + comisionPago) / 100;
+    const ganancia = precio - total - cargoFijo - comisiones;
+
+    const formato = n => n.toLocaleString("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 2
+    });
+
+    document.getElementById("precio").textContent = formato(precio);
+
+    document.getElementById("detalle").textContent =
+      "Costos ingresados: " + formato(total) +
+      ". Comisiones porcentuales: " + formato(comisiones) +
+      ". Cargo fijo: " + formato(cargoFijo) +
+      ". Ganancia estimada: " + formato(ganancia) +
+      " (" + margen + "% del precio de venta).";
+
+    resultado.style.display = "block";
+  }
+
   </script>
 </body>
 </html>
