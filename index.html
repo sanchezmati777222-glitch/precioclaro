@@ -307,6 +307,168 @@ main {
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition: none !important; }
     }
+    
+/* Rediseño visual de PrecioClaro */
+body {
+  color: var(--texto);
+  background:
+    radial-gradient(ellipse at top left, #eaf1ff 0, transparent 38%),
+    var(--fondo);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+header {
+  text-align: left;
+  margin-bottom: 28px;
+}
+
+header h1 {
+  font-size: clamp(30px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -1.4px;
+  color: #173b7a;
+  margin-bottom: 8px;
+}
+
+header .muted {
+  max-width: 560px;
+  line-height: 1.65;
+}
+
+.panel {
+  background: var(--tarjeta);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  padding: clamp(18px, 3vw, 28px);
+  margin-bottom: 22px;
+  box-shadow: var(--sombra);
+}
+
+.panel h2 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px;
+}
+
+.section-title {
+  font-size: 15px;
+  color: #1d4ed8;
+  margin-top: 26px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--borde);
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  margin-top: 17px;
+  margin-bottom: 7px;
+  color: #334155;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid #d5deec;
+  border-radius: 11px;
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+button {
+  border: 0;
+  border-radius: 11px;
+  padding: 12px 17px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, background .15s;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button.primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, .2);
+}
+
+.result {
+  background: linear-gradient(145deg, #eff6ff, #f8fbff);
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 22px;
+}
+
+.price {
+  color: #1d4ed8;
+  font-size: clamp(32px, 5vw, 42px);
+  font-weight: 850;
+  letter-spacing: -1.2px;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+
+.product {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  padding: 17px;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.product:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 5px 18px rgba(30, 64, 175, .06);
+}
+
+.product-price {
+  color: #1d4ed8;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.help, .muted {
+  color: var(--secundario);
+}
+
+.help {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+footer {
+  max-width: 700px;
+  padding: 16px 8px;
+}
+
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 30px;
+  }
+
+  .panel {
+    border-radius: 16px;
+  }
+
+  .result {
+    padding: 16px;
+  }
+}
   </style>
 </head>
 <body>
