@@ -8,16 +8,20 @@
   <meta name="theme-color" content="#047857">
   <title>PrecioClaro | Precios y productos</title>
   <style>
-    :root {
-      --fondo: #f3f6fb;
-      --tarjeta: #ffffff;
-      --texto: #172033;
-      --secundario: #64748b;
-      --borde: #e2e8f0;
-      --verde: #10b981;
-      --oscuro: #047857;
-      --azul: #2563eb;
-      --rojo: #dc2626;
+:root {
+  --fondo: #f5f8ff;
+  --tarjeta: #ffffff;
+  --texto: #172b4d;
+  --secundario: #64748b;
+  --borde: #e2e8f0;
+  --verde: #16a34a;
+  --oscuro: #1d4ed8;
+  --azul: #2563eb;
+  --rojo: #dc2626;
+  --azul-suave: #eff6ff;
+  --sombra: 0 8px 30px rgba(30, 64, 175, 0.07);
+}
+
     }
 
     * { box-sizing: border-box; }
@@ -32,11 +36,13 @@
       color: var(--texto);
       line-height: 1.6;
     }
+    
+main {
+  width: min(100% - 32px, 1120px);
+  margin: auto;
+  padding: 28px 0 48px;
+}
 
-    main {
-      width: min(94%, 720px);
-      margin: auto;
-      padding: 30px 0 40px;
     }
 
     header {
@@ -113,8 +119,8 @@
       padding: 11px 15px;
       border: 0;
       border-radius: 10px;
-      background: var(--verde);
-      color: #052e24;
+      background: var(--azul);
+      color: #ffffff;
       font: inherit;
       font-weight: 750;
       cursor: pointer;
@@ -127,6 +133,7 @@
       width: 100%;
       margin-top: 22px;
       min-height: 50px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
     }
 
     .secondary {
