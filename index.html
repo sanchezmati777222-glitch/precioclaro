@@ -1,9 +1,9 @@
 
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset=
+"UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#047857">
   <title>PrecioClaro | Precios y productos</title>
@@ -282,6 +282,13 @@
       text-align: center;
     }
 
+    .auth-panel { max-width: 520px; margin: 20px auto; }
+    .auth-panel input { margin-top: 6px; }
+    .auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .auth-status { min-height: 24px; margin-top: 10px; font-size: 14px; color: var(--secundario); }
+    #appArea[hidden], #authPanel[hidden] { display: none !important; }
+    .account-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+
     @media (max-width: 480px) {
       main { padding-top: 22px; }
       .product-photo { width: 82px; height: 82px; }
@@ -301,10 +308,29 @@
     <h1>PrecioClaro 💡</h1>
     <p class="muted">
       Calculá precios, conocé tus ganancias y organizá tus productos.
-      Gratis y sin registrarte.
+      Tus precios y productos, disponibles al iniciar sesión.
     </p>
   </header>
 
+  <section class="panel auth-panel" id="authPanel">
+    <h2>Tu cuenta de PrecioClaro</h2>
+    <p class="muted">Registrate o iniciá sesión para guardar y sincronizar tus productos entre dispositivos.</p>
+    <label for="authEmail">Email</label>
+    <input id="authEmail" type="email" autocomplete="email" placeholder="tu@email.com">
+    <label for="authPassword">Contraseña</label>
+    <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo 6 caracteres">
+    <div class="auth-actions">
+      <button type="button" onclick="registrar()">Crear cuenta</button>
+      <button type="button" class="secondary" onclick="iniciarSesion()">Iniciar sesión</button>
+    </div>
+    <div class="auth-status" id="authStatus" aria-live="polite"></div>
+    <p class="help">Si activaste la confirmación por email en Supabase, revisá tu bandeja de entrada para confirmar la cuenta.</p>
+  </section>
+  <div id="appArea" hidden>
+    <section class="panel account-bar">
+      <div><strong id="usuarioActual">Sesión iniciada</strong><p class="help">Tus productos se guardan en tu cuenta.</p></div>
+      <button type="button" class="secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+    </section>
   <section class="panel">
     <h2 id="formTitle">Calculadora de precios</h2>
     <p class="muted">Completá los datos para calcular tu precio de venta.</p>
@@ -352,7 +378,7 @@
       <button class="primary" type="button" id="guardarBtn" onclick="guardarProducto()">
         Guardar producto
       </button>
-      <p class="help">Guardá el cálculo para volver a consultarlo más tarde en este navegador.</p>
+      <p class="help">Guardá el cálculo en tu cuenta para acceder desde otros dispositivos.</p>
     </div>
 
     <div class="actions" id="cancelarEdicion" style="display:none">
@@ -369,11 +395,16 @@
   <footer>
     Los cálculos son estimaciones y no contemplan automáticamente impuestos,
     retenciones, envíos ni otras tarifas que no hayas ingresado.
-    Los productos se guardan localmente en este navegador, no en una cuenta online.
+    Los productos se guardan en tu cuenta de PrecioClaro. Cerrá sesión si compartís el dispositivo.
   </footer>
+  </div>
 </main>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  //
+  const SUPABASE_URL = "https://bqauelebvkoxawxfmqrh.supabase.co" ;
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_nQY8BGNDB-rX4IfR9_SbnA_GBIxhtcg" ;
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   const STORAGE_KEY = "precioclaro_productos_v1";
   let fotoActual = "";
   let ultimoCalculo = null;
@@ -394,24 +425,40 @@
     return Number($(id).value);
   }
 
-  function leerProductos() {
-    try {
-      const datos = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      return Array.isArray(datos) ? datos : [];
-    } catch {
-      return [];
-    }
+  let productosEnMemoria = [];
+  let usuarioSesion = null;
+  let fotoPathActual = "";
+
+  function normalizarProducto(p) {
+    return {
+      id: p.id, nombre: p.nombre, costo: Number(p.costo), extras: Number(p.extras),
+      margen: Number(p.margen), comisionVenta: Number(p.comision_venta),
+      comisionPago: Number(p.comision_pago), cargoFijo: Number(p.cargo_fijo),
+      precio: Number(p.precio), ganancia: Number(p.ganancia), totalCostos: Number(p.costo) + Number(p.extras),
+      comisionVentaPesos: Number(p.precio) * Number(p.comision_venta) / 100,
+      comisionPagoPesos: Number(p.precio) * Number(p.comision_pago) / 100,
+      totalComisiones: Number(p.precio) * (Number(p.comision_venta) + Number(p.comision_pago)) / 100,
+      foto_path: p.foto_url || "", foto: p.foto_signed || ""
+    };
   }
 
-  function guardarProductosEnNavegador(productos) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(productos));
-      return true;
-    } catch (error) {
-      alert("No se pudieron guardar los datos. Puede faltar espacio en el navegador. Probá con una foto más pequeña o eliminá productos que ya no uses.");
-      return false;
+  async function cargarProductos() {
+    if (!usuarioSesion) return;
+    const { data, error } = await supabaseClient.from("productos").select("*").order("creado_en", { ascending: false });
+    if (error) { alert("No se pudieron cargar los productos: " + error.message); return; }
+    const productos = data || [];
+    for (const p of productos) {
+      p.foto_signed = "";
+      if (p.foto_url) {
+        const { data: signed, error: photoError } = await supabaseClient.storage.from("fotos-productos").createSignedUrl(p.foto_url, 3600);
+        if (!photoError && signed) p.foto_signed = signed.signedUrl;
+      }
     }
+    productosEnMemoria = productos.map(normalizarProducto);
+    mostrarProductos();
   }
+
+  function leerProductos() { return productosEnMemoria; }
 
   function leerDatosFormulario() {
     return {
@@ -564,48 +611,36 @@
     });
   }
 
-  function guardarProducto() {
-    if (!ultimoCalculo) {
-      alert("Primero calculá el precio del producto.");
-      return;
-    }
-
+  async function guardarProducto() {
+    if (!usuarioSesion) { alert("Iniciá sesión para guardar productos."); return; }
+    if (!ultimoCalculo) { alert("Primero calculá el precio del producto."); return; }
     const nombre = $("nombreProducto").value.trim();
-    if (!nombre) {
-      alert("Ingresá un nombre para identificar el producto.");
-      $("nombreProducto").focus();
-      return;
+    if (!nombre) { alert("Ingresá un nombre para identificar el producto."); $("nombreProducto").focus(); return; }
+    const anterior = productoEditando ? productosEnMemoria.find(p => p.id === productoEditando) : null;
+    let fotoPath = anterior?.foto_path || "";
+    if (fotoActual && fotoActual.startsWith("data:image/")) {
+      try {
+        const blob = await (await fetch(fotoActual)).blob();
+        const filePath = `${usuarioSesion.id}/${crypto.randomUUID()}.jpg`;
+        const { error: uploadError } = await supabaseClient.storage.from("fotos-productos").upload(filePath, blob, { contentType: "image/jpeg", upsert: false });
+        if (uploadError) { alert("No se pudo subir la foto: " + uploadError.message); return; }
+        fotoPath = filePath;
+      } catch (e) { alert("No se pudo preparar la foto para subirla."); return; }
     }
-
-    const productos = leerProductos();
-    const anterior = productoEditando
-      ? productos.find(p => p.id === productoEditando)
-      : null;
-
-    const producto = {
-      id: productoEditando || (
-        window.crypto && crypto.randomUUID
-          ? crypto.randomUUID()
-          : String(Date.now()) + Math.random().toString(16).slice(2)
-      ),
-      ...ultimoCalculo,
-      nombre,
-      foto: fotoActual || (anterior ? anterior.foto : ""),
-      actualizado: new Date().toISOString()
+    const d = ultimoCalculo;
+    const registro = {
+      user_id: usuarioSesion.id, nombre, foto_url: fotoPath || null,
+      costo: d.costo, extras: d.extras, margen: d.margen,
+      comision_venta: d.comisionVenta, comision_pago: d.comisionPago,
+      cargo_fijo: d.cargoFijo, precio: d.precio, ganancia: d.ganancia
     };
-
-    let nuevos;
-    if (productoEditando) {
-      nuevos = productos.map(p => p.id === productoEditando ? producto : p);
-    } else {
-      nuevos = [...productos, producto];
-    }
-
-    if (!guardarProductosEnNavegador(nuevos)) return;
-
+    let result;
+    if (productoEditando) result = await supabaseClient.from("productos").update(registro).eq("id", productoEditando).select().single();
+    else result = await supabaseClient.from("productos").insert(registro).select().single();
+    if (result.error) { alert("No se pudo guardar el producto: " + result.error.message); return; }
     cancelarEdicion();
-    mostrarProductos();
-    alert("Producto guardado correctamente.");
+    await cargarProductos();
+    alert("Producto guardado en tu cuenta.");
   }
 
   function elemento(tag, clase, texto) {
@@ -696,6 +731,7 @@
     productoEditando = id;
     ultimoCalculo = null;
     fotoActual = p.foto || "";
+    fotoPathActual = p.foto_path || "";
 
     $("nombreProducto").value = p.nombre;
     $("costo").value = p.costo;
@@ -726,6 +762,7 @@
     productoEditando = null;
     ultimoCalculo = null;
     fotoActual = "";
+    fotoPathActual = "";
 
     $("formTitle").textContent = "Calculadora de precios";
     $("cancelarEdicion").style.display = "none";
@@ -743,17 +780,74 @@
     $("fotoPreview").style.display = "none";
   }
 
-  function eliminarProducto(id) {
+  async function eliminarProducto(id) {
     if (!confirm("¿Seguro que querés eliminar este producto guardado?")) return;
-
-    const nuevos = leerProductos().filter(p => p.id !== id);
-    if (!guardarProductosEnNavegador(nuevos)) return;
-
+    const p = productosEnMemoria.find(item => item.id === id);
+    const { error } = await supabaseClient.from("productos").delete().eq("id", id);
+    if (error) { alert("No se pudo eliminar: " + error.message); return; }
+    if (p?.foto_path) {
+      const { error: photoError } = await supabaseClient.storage.from("fotos-productos").remove([p.foto_path]);
+      if (photoError) console.warn("No se pudo borrar la foto", photoError.message);
+    }
     if (productoEditando === id) cancelarEdicion();
-    mostrarProductos();
+    await cargarProductos();
   }
 
-  mostrarProductos();
+  function estadoAuth(mensaje) { $("authStatus").textContent = mensaje || ""; }
+  function credenciales() {
+    const email = $("authEmail").value.trim();
+    const password = $("authPassword").value;
+    if (!email || !password) { estadoAuth("Ingresá email y contraseña."); return null; }
+    if (password.length < 6) { estadoAuth("La contraseña debe tener al menos 6 caracteres."); return null; }
+    return { email, password };
+  }
+  async function registrar() {
+    const c = credenciales(); if (!c) return;
+    estadoAuth("Creando cuenta...");
+    const { data, error } = await supabaseClient.auth.signUp(c);
+    if (error) { estadoAuth(error.message); return; }
+    if (data.session) await manejarSesion(data.session.user);
+    else estadoAuth("Cuenta creada. Revisá tu email para confirmar la cuenta y después iniciá sesión.");
+  }
+  async function iniciarSesion() {
+    const c = credenciales(); if (!c) return;
+    estadoAuth("Iniciando sesión...");
+    const { data, error } = await supabaseClient.auth.signInWithPassword(c);
+    if (error) { estadoAuth(error.message); return; }
+    await manejarSesion(data.user);
+  }
+  async function manejarSesion(user) {
+    usuarioSesion = user || null;
+    const dentro = Boolean(usuarioSesion);
+    $("authPanel").hidden = dentro;
+    $("appArea").hidden = !dentro;
+    if (dentro) {
+      $("usuarioActual").textContent = usuarioSesion.email || "Sesión iniciada";
+      estadoAuth("");
+      await cargarProductos();
+    } else {
+      productosEnMemoria = [];
+      mostrarProductos();
+    }
+  }
+  async function cerrarSesion() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) { alert("No se pudo cerrar sesión: " + error.message); return; }
+    cancelarEdicion();
+    await manejarSesion(null);
+  }
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    setTimeout(() => manejarSesion(session?.user || null), 0);
+  });
+  (async function iniciar() {
+    if (SUPABASE_URL.includes("PEGAR_") || SUPABASE_PUBLISHABLE_KEY.includes("PEGAR_")) {
+      estadoAuth("Falta configurar la API URL y la Publishable key en el código antes de usar las cuentas.");
+      $("appArea").hidden = true;
+      return;
+    }
+    const { data } = await supabaseClient.auth.getSession();
+    await manejarSesion(data.session?.user || null);
+  })();
 </script>
 </body>
 </html>
